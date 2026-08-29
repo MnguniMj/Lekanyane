@@ -51,6 +51,7 @@ interface NavItem {
   icon: any;
   href: string;
   active: boolean;
+  needsConfirm?: boolean;
 }
 
 const SIDEBAR: NavItem[] = [
@@ -61,8 +62,20 @@ const SIDEBAR: NavItem[] = [
     href: "/admin#applicants",
     active: true,
   },
-  { label: "Website", icon: HomeIcon, href: "/", active: false },
-  { label: "FAQs", icon: QuestionMarkCircleIcon, href: "/#faq", active: false },
+  {
+    label: "Website",
+    icon: HomeIcon,
+    href: "/",
+    active: false,
+    needsConfirm: true,
+  },
+  {
+    label: "FAQs",
+    icon: QuestionMarkCircleIcon,
+    href: "/#faq",
+    active: false,
+    needsConfirm: true,
+  },
   {
     label: "Settings",
     icon: Cog6ToothIcon,
@@ -84,6 +97,8 @@ export default function AdminPage() {
   const [seedKey, setSeedKey] = useState(0);
   const [sessionChecked, setSessionChecked] = useState(false);
   const [username, setUsername] = useState<string | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmTarget, setConfirmTarget] = useState<string | null>(null);
 
   useEffect(() => {
     const session = getSession();
@@ -99,6 +114,27 @@ export default function AdminPage() {
   const handleLogout = () => {
     clearAdminSession();
     router.replace("/admin/login");
+  };
+
+  const requestNavigateToWebsite = (target: string) => {
+    setConfirmTarget(target);
+    setConfirmOpen(true);
+  };
+
+  const handleConfirmContinue = () => {
+    if (!confirmTarget) {
+      setConfirmOpen(false);
+      return;
+    }
+    clearAdminSession();
+    router.push(confirmTarget);
+    setConfirmOpen(false);
+    setConfirmTarget(null);
+  };
+
+  const handleConfirmCancel = () => {
+    setConfirmOpen(false);
+    setConfirmTarget(null);
   };
 
   const handleStatus = async (id: string, status: ApplicantStatus) => {
@@ -204,16 +240,26 @@ export default function AdminPage() {
           <nav className="px-3 py-4 space-y-1">
             {SIDEBAR.map((item) => {
               const Icon = item.icon;
+              const baseCls = `group flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors text-left ${
+                item.active
+                  ? "bg-white/10 text-white"
+                  : "text-gray-300 hover:bg-white/5 hover:text-white"
+              }`;
+              if (item.needsConfirm) {
+                return (
+                  <button
+                    key={item.label}
+                    type="button"
+                    onClick={() => requestNavigateToWebsite(item.href)}
+                    className={baseCls}
+                  >
+                    <Icon className="h-5 w-5 shrink-0" />
+                    {sidebarOpen && <span>{item.label}</span>}
+                  </button>
+                );
+              }
               return (
-                <Link
-                  key={item.label}
-                  href={item.href}
-                  className={`group flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors ${
-                    item.active
-                      ? "bg-white/10 text-white"
-                      : "text-gray-300 hover:bg-white/5 hover:text-white"
-                  }`}
-                >
+                <Link key={item.label} href={item.href} className={baseCls}>
                   <Icon className="h-5 w-5 shrink-0" />
                   {sidebarOpen && <span>{item.label}</span>}
                 </Link>
@@ -272,12 +318,13 @@ export default function AdminPage() {
               </Typography>
             </div>
             <div className="flex items-center gap-3">
-              <Link
-                href="/"
+              <button
+                type="button"
+                onClick={() => requestNavigateToWebsite("/")}
                 className="hidden md:inline-flex text-sm text-gray-600 hover:text-gray-900"
               >
                 View Site
-              </Link>
+              </button>
               <div className="hidden md:flex items-center gap-2 text-sm text-gray-600">
                 <div
                   className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-semibold"
@@ -590,6 +637,73 @@ export default function AdminPage() {
           </main>
         </div>
       </div>
+
+      {/* Confirm dialog: leaving admin site */}
+      {confirmOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center px-4"
+          onClick={handleConfirmCancel}
+        >
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            aria-hidden
+          />
+          <div
+            className="relative w-full max-w-md rounded-2xl bg-white shadow-2xl border border-gray-200 p-6 md:p-8"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start gap-4">
+              <div
+                className="w-11 h-11 shrink-0 rounded-full flex items-center justify-center"
+                style={{ backgroundColor: "#FEF2F2" }}
+              >
+                <ArrowRightOnRectangleIcon
+                  className="h-6 w-6"
+                  style={{ color: RED }}
+                />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                  Leaving the Admin Console
+                </h3>
+                <p className="text-sm text-gray-600 leading-relaxed mb-2">
+                  You are about to navigate to the main Lekanyane website.
+                  Leaving the admin area will end your current session and you
+                  will be signed out.
+                </p>
+                <p className="text-sm text-gray-500 leading-relaxed">
+                  To return to the admin dashboard later, you will need to sign
+                  in again with your username and password.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-7 flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
+              <button
+                type="button"
+                onClick={handleConfirmCancel}
+                className="inline-flex items-center justify-center rounded-md px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmContinue}
+                className="inline-flex items-center justify-center rounded-md px-4 py-2.5 text-sm font-medium text-white transition-colors"
+                style={{ backgroundColor: RED }}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.backgroundColor = RED_DARK)
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.backgroundColor = RED)
+                }
+              >
+                Continue
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
