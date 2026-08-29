@@ -18,6 +18,7 @@ import {
   HomeIcon,
   CheckCircleIcon,
 } from "@heroicons/react/24/solid";
+import { addApplicant } from "@/lib/applicants";
 
 type FormState = {
   firstName: string;
@@ -61,7 +62,7 @@ export default function ApplyPage() {
   const handleChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >
+    >,
   ) => {
     const target = e.target;
     const name = target.name as keyof FormState;
@@ -84,6 +85,13 @@ export default function ApplyPage() {
     }
   };
 
+  const handleBooleanChange = (name: keyof FormState, value: boolean) => {
+    setValues((v) => ({ ...v, [name]: value }));
+    if (errors[name]) {
+      setErrors((er) => ({ ...er, [name]: undefined }));
+    }
+  };
+
   const validate = (): FormErrors => {
     const next: FormErrors = {};
     if (!values.firstName.trim()) {
@@ -94,9 +102,7 @@ export default function ApplyPage() {
     }
     if (!values.email.trim()) {
       next.email = "Please enter your email address.";
-    } else if (
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email.trim())
-    ) {
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email.trim())) {
       next.email = "Please enter a valid email address.";
     }
     if (!values.phone.trim()) {
@@ -118,6 +124,22 @@ export default function ApplyPage() {
       return;
     }
     setIsLoading(true);
+    try {
+      addApplicant({
+        firstName: values.firstName,
+        lastName: values.lastName,
+        email: values.email,
+        phone: values.phone,
+        dateOfBirth: values.dateOfBirth,
+        address: values.address,
+        contactMethod: values.contactMethod as "phone" | "email",
+        membershipType: values.membershipType as "individual" | "other",
+        additionalInfo: values.additionalInfo,
+        consent: values.consent,
+      });
+    } catch {
+      /* prototype persistence is best-effort */
+    }
     await new Promise((r) => setTimeout(r, 1400));
     setIsLoading(false);
     setIsSubmitted(true);
@@ -147,7 +169,9 @@ export default function ApplyPage() {
             <span>Home</span>
           </Link>
           <ChevronRightIcon className="h-4 w-4" />
-          <span className="text-gray-800 font-medium">Apply for Membership</span>
+          <span className="text-gray-800 font-medium">
+            Apply for Membership
+          </span>
         </div>
 
         <div className="text-center mb-10">
@@ -178,10 +202,7 @@ export default function ApplyPage() {
                 className="w-20 h-20 rounded-full flex items-center justify-center mb-6"
                 style={{ backgroundColor: RED_LIGHT }}
               >
-                <CheckCircleIcon
-                  className="h-10 w-10"
-                  style={{ color: RED }}
-                />
+                <CheckCircleIcon className="h-10 w-10" style={{ color: RED }} />
               </div>
               <Typography
                 variant="h6"
@@ -386,7 +407,10 @@ export default function ApplyPage() {
                       name="membershipType"
                       value={values.membershipType}
                       onChange={(val) =>
-                        handleSelectChange("membershipType", val ?? "individual")
+                        handleSelectChange(
+                          "membershipType",
+                          val ?? "individual",
+                        )
                       }
                     >
                       <Option value="individual">Individual Membership</Option>
@@ -422,13 +446,8 @@ export default function ApplyPage() {
                       id="consent"
                       name="consent"
                       checked={values.consent}
-                      onChange={(e) =>
-                        handleChange({
-                          target: {
-                            name: "consent",
-                            checked: (e.target as HTMLInputElement).checked,
-                          },
-                        } as unknown as React.ChangeEvent<HTMLInputElement>)
+                      onChange={(checked) =>
+                        handleBooleanChange("consent", Boolean(checked))
                       }
                       className={`!border-gray-400 ${
                         errors.consent ? "!border-red-500" : ""

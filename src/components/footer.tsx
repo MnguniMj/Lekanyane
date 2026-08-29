@@ -81,16 +81,6 @@ export function Footer() {
         >
           &copy; 2026 Lekanyane. All rights reserved.
         </Typography>
-        <p className="text-center font-normal !text-gray-700 mt-2">
-          Distributed by{" "}
-          <a
-            className="text-green-700 font-semibold"
-            href="https://themewagon.com"
-            target="_blank"
-          >
-            ThemeWagon
-          </a>
-        </p>
       </div>
     </footer>
   );
